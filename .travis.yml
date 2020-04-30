@@ -24,7 +24,7 @@ jobs:
   - stage: release
     before_script:
     - echo VUE_APP_DEBUG=1 > .env
-    - echo BASE_URL=./alerta/ > .env
+    - echo BASE_URL=/alerta/ > .env
     script: npm run build
     before_deploy:
     - tar cvfz alerta-webui.tar.gz dist/*
