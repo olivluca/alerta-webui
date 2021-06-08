@@ -20,6 +20,7 @@ export const en = {
   Permissions: 'Permissions',
   APIKeys: 'API Keys',
   Labels: 'Labels',
+  Searches: 'Searches',
   Reports: 'Reports',
   More: 'More',
   Settings: 'Settings',
@@ -80,6 +81,7 @@ export const en = {
 
   // Alert detail
   AlertId: 'Alert ID',
+  AlertOrNoteId: 'Alert/Note ID',
   LastReceiveAlertId: 'Last Receive Alert ID',
   CreateTime: 'Create Time',
   ReceiveTime: 'Receive Time',
@@ -124,12 +126,17 @@ export const en = {
   TimeoutLeft: 'Timeout',
   Dupl: 'Dupl.',
   PrevSeverity: 'Prev. Severity',
+  Duration: 'Duration',
   LastReceiveId: 'Last Receive ID',
   LastNote: 'Last Note',
 
   // Alert list filter
   Filters: 'Filters',
   FilterDescription: 'Filter results by text search',
+  AllEnvironments: 'All environments',
+  EnvironmentDescription: 'Choose one or more environment',
+  AllSeverities: 'All severities',
+  SeverityDescription: 'Choose one or more severity',
   AllStatuses: 'All statuses',
   StatusDescription: 'Choose one or more status',
   AllCustomers: 'All customers',
@@ -179,6 +186,9 @@ export const en = {
   Reason: 'Reason',
   NewBlackout: 'New Blackout',
   EditBlackout: 'Edit Blackout',
+  Active: 'Active',
+  Pending: 'Pending',
+  Expired: 'Expired',
 
   // Customers
   LookUp: 'Look Up',
@@ -231,15 +241,31 @@ export const en = {
   UseLocal: 'Use local date & time',
   UseUTC: 'Use Coordinated Universal Time (UTC)',
   AlertSettings: 'Alert summary settings',
+  ShowAllowedEnvs: 'Always show allowed environments',
+  ShowNotesIcon: 'Show notes icon',
+  ShowNotesHint: 'Show icon next to alert status to indicate an operator note',
+  Font: 'Font',
+  FontSize: 'Font Size',
+  FontWeight: 'Font Weight',
   PageRows: 'Rows per page',
   rows: 'rows',
+  ValueWidth: 'Value Width',
+  DescriptionWidth: 'Description Text Width',
   RefreshInterval: 'Refresh interval',
   seconds: 'seconds',
+  minutes: 'minutes',
   AckTimeout: 'Ack Timeout',
   ShelveTimeout: 'Shelve timeout',
+  BlackoutSettings: 'Blackout period settings',
+  BlackoutStartNow: 'Start blackout periods immediately',
+  BlackoutPeriod: 'Blackout Period',
   hours: 'hours',
 
-  // Profile Me
+  // Profile
+  Profile: 'Profile',
+  UserID: 'User ID',
+  PrimaryUserID: 'Primary User ID',
+  Provider: 'Provider',
   EmailVerified: 'Email verified',
   EmailNotVerified: 'Email not verified',
   Customers: 'Customers',
@@ -271,11 +297,12 @@ export const en = {
   EditUser: 'Edit user',
 
   // Reports
-  TopFlapping: 'Top 10 Flapping',
+  Top: 'Top',
+  Flapping: 'Flapping',
+  Offenders: 'Offenders',
+  Standing: 'Standing',
   TopFlappingDescription: 'Chattering and fleeting alert sources that have generated the most number of alert severity changes.',
-  TopOffenders: 'Top 10 Offenders',
   TopOffendersDescription: 'Frequently occurring alert sources that have generated the most number of alerts and alert duplicates.',
-  TopStanding: 'Top 10 Standing',
   TopStandingDescription: 'Stale alert sources that have active alerts for a prolonged duration.',
   
   Count: 'Count',

@@ -5,7 +5,7 @@
   >
     <div v-if="!isKiosk">
       <v-navigation-drawer
-        v-if="isLoggedIn || !isAuthRequired"
+        v-if="isLoggedIn || !isAuthRequired || isAllowReadonly"
         v-model="drawer"
         :clipped="$vuetify.breakpoint.lgAndUp"
         disable-resize-watcher
@@ -39,55 +39,8 @@
         <v-divider />
         <v-list dense>
           <template v-for="(item, index) in items">
-            <v-layout
-              v-if="item.heading"
-              :key="item.heading"
-              row
-              align-center
-            >
-              <v-flex xs6>
-                <v-subheader v-if="item.heading">
-                  {{ item.heading }}
-                </v-subheader>
-              </v-flex>
-              <v-flex
-                xs6
-                class="text-xs-center"
-              >
-                <a
-                  href="#!"
-                  class="body-2 black--text"
-                >
-                  EDIT
-                </a>
-              </v-flex>
-            </v-layout>
-            <v-list-group
-              v-else-if="item.children"
-              :key="item.text"
-              v-model="item.model"
-              :prepend-icon="item.model ? item.icon : item['icon-alt']"
-              append-icon
-            >
-              <v-list-tile slot="activator">
-                <v-list-tile-content>
-                  <v-list-tile-title>{{ item.text }}</v-list-tile-title>
-                </v-list-tile-content>
-              </v-list-tile>
-              <v-list-tile
-                v-for="(child, i) in item.children"
-                :key="i"
-              >
-                <v-list-tile-action v-if="child.icon">
-                  <v-icon>{{ child.icon }}</v-icon>
-                </v-list-tile-action>
-                <v-list-tile-content>
-                  <v-list-tile-title>{{ child.text }}</v-list-tile-title>
-                </v-list-tile-content>
-              </v-list-tile>
-            </v-list-group>
             <v-list-tile
-              v-else-if="item.icon && item.show"
+              v-if="item.icon && item.show"
               :key="item.text"
               v-has-perms="item.perms"
               :to="item.path"
@@ -107,6 +60,37 @@
                 </v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
+
+            <v-list-group
+              v-else-if="item.queries && item.queries.length > 0"
+              :key="item.text"
+              :prepend-icon="item.model ? item.icon : item['icon-alt']"
+              sub-group
+              no-action
+            >
+              <template v-slot:activator>
+                <v-list-tile>
+                  <v-list-tile-title>
+                    {{ item.text }}
+                  </v-list-tile-title>
+                </v-list-tile>
+              </template>
+              <v-list-tile
+                v-for="(q, i) in item.queries"
+                :key="i"
+                @click="submitSearch(q.query)"
+              >
+                <v-list-tile-title v-text="q.text" />
+                <v-list-tile-action>
+                  <v-icon
+                    small
+                    @click.stop="deleteSearch(q)"
+                    v-text="q.icon"
+                  />
+                </v-list-tile-action>
+              </v-list-tile>
+            </v-list-group>
+
             <v-divider
               v-else-if="item.divider"
               :key="index"
@@ -158,7 +142,23 @@
           @blur="hasFocus = false"
           @change="submitSearch"
           @click:clear="clearSearch"
-        />
+        >
+          <template v-slot:append-outer>
+            <v-tooltip
+              bottom
+            >
+              <template v-slot:activator="{ on }">
+                <v-icon
+                  v-on="on"
+                  @click="saveSearch"
+                >
+                  push_pin
+                </v-icon>
+              </template>
+              <span>{{ $t('Save') }}</span>
+            </v-tooltip>
+          </template>
+        </v-text-field>
 
         <div
           v-if="$route.name === 'alerts'"
@@ -180,7 +180,7 @@
 
         <v-tooltip bottom>
           <v-btn
-            v-show="isLoggedIn || !isAuthRequired"
+            v-show="isLoggedIn || !isAuthRequired || isAllowReadonly"
             slot="activator"
             icon
             @click="toggleFullScreen"
@@ -192,7 +192,7 @@
 
         <v-tooltip bottom>
           <v-btn
-            v-show="isLoggedIn || !isAuthRequired"
+            v-show="isLoggedIn || !isAuthRequired || isAllowReadonly"
             slot="activator"
             icon
           >
@@ -236,23 +236,25 @@
           />
         </v-menu>
 
-        <v-btn
-          v-show="!isLoggedIn && isSignupEnabled"
-          round
-          outline
-          color="primary"
-          to="/signup"
-        >
-          {{ $t('SignUp') }}
-        </v-btn>
-        <v-btn
-          v-show="!isLoggedIn"
-          round
-          color="primary"
-          to="/login"
-        >
-          {{ $t('LogIn') }}
-        </v-btn>
+        <span class="hidden-xs-only">
+          <v-btn
+            v-show="!isLoggedIn && isSignupEnabled"
+            round
+            outline
+            color="primary"
+            to="/signup"
+          >
+            {{ $t('SignUp') }}
+          </v-btn>
+          <v-btn
+            v-show="!isLoggedIn"
+            round
+            color="primary"
+            to="/login"
+          >
+            {{ $t('LogIn') }}
+          </v-btn>
+        </span>
       </v-toolbar>
 
       <v-toolbar
@@ -266,14 +268,15 @@
         >
           <v-icon>arrow_back</v-icon>
         </v-btn>
-        <v-toolbar-title>
-          Back
-        </v-toolbar-title>
-
+        <span class="hidden-sm-and-down">
+          <v-toolbar-title>
+            Back
+          </v-toolbar-title>
+        </span>
         <v-spacer />
 
         <span class="subheading">
-          {{ selected.length }}<span class="hidden-xs-only"> {{ $t('Selected') }}</span>
+          {{ selected.length }}<span class="hidden-sm-and-down"> {{ $t('selected') }}</span>
         </span>
 
         <v-spacer />
@@ -383,7 +386,7 @@
 
         <v-tooltip bottom>
           <v-btn
-            v-show="isLoggedIn || !isAuthRequired"
+            v-show="isLoggedIn || !isAuthRequired || isAllowReadonly"
             slot="activator"
             icon
             @click="toggleFullScreen"
@@ -395,7 +398,7 @@
 
         <v-tooltip bottom>
           <v-btn
-            v-show="isLoggedIn || !isAuthRequired"
+            v-show="isLoggedIn || !isAuthRequired || isAllowReadonly"
             slot="activator"
             icon
           >
@@ -439,23 +442,25 @@
           />
         </v-menu>
 
-        <v-btn
-          v-show="!isLoggedIn && isSignupEnabled"
-          round
-          outline
-          color="primary"
-          disabled
-        >
-          {{ $t('SignUp') }}
-        </v-btn>
-        <v-btn
-          v-show="!isLoggedIn"
-          round
-          color="primary"
-          disabled
-        >
-          {{ $t('LogIn') }}
-        </v-btn>
+        <span class="hidden-xs-only">
+          <v-btn
+            v-show="!isLoggedIn && isSignupEnabled"
+            round
+            outline
+            color="primary"
+            disabled
+          >
+            {{ $t('SignUp') }}
+          </v-btn>
+          <v-btn
+            v-show="!isLoggedIn"
+            round
+            color="primary"
+            disabled
+          >
+            {{ $t('LogIn') }}
+          </v-btn>
+        </span>
       </v-toolbar>
     </div>
 
@@ -464,13 +469,40 @@
       <router-view />
       <snackbar />
     </v-content>
+
+    <div v-if="!isKiosk">
+      <span class="hidden-sm-and-up">
+        <v-btn
+          v-show="!isLoggedIn && isSignupEnabled"
+          block
+          round
+          outline
+          color="primary"
+          to="/signup"
+          :disabled="selected.length > 0"
+        >
+          {{ $t('SignUp') }}
+        </v-btn>
+        <v-btn
+          v-show="!isLoggedIn"
+          block
+          round
+          color="primary"
+          to="/login"
+          :disabled="selected.length > 0"
+        >
+          {{ $t('LogIn') }}
+        </v-btn>
+      </span>
+    </div>
   </v-app>
 </template>
 
 <script>
 import Banner from '@/components/lib/Banner.vue'
-import ProfileMe from '@/components/ProfileMe.vue'
+import ProfileMe from '@/components/auth/ProfileMe.vue'
 import Snackbar from '@/components/lib/Snackbar.vue'
+
 import i18n from '@/plugins/i18n'
 
 export default {
@@ -502,6 +534,13 @@ export default {
           path: '/alerts',
           perms: 'read:alerts',
           show: true
+        },
+        {
+          icon: 'expand_less',
+          'icon-alt': 'expand_more',
+          text: i18n.t('Searches'),
+          model: false,
+          queries: this.queries
         },
         {
           icon: 'timer',
@@ -550,15 +589,8 @@ export default {
           text: i18n.t('APIKeys'),
           path: '/keys',
           perms: 'read:keys',
-          show: true
+          show: this.isLoggedIn || !this.isAuthRequired
         },
-        // {
-        //   icon: 'keyboard_arrow_up',
-        //   'icon-alt': 'keyboard_arrow_down',
-        //   text: i18n.t('Labels'),
-        //   model: true,
-        //   children: [{ icon: 'add', text: 'Create label' }]
-        // },
         {
           icon: 'assessment',
           text: i18n.t('Reports'),
@@ -566,20 +598,14 @@ export default {
           perms: 'read:alerts',
           show: true
         },
-        // {
-        //   icon: 'keyboard_arrow_up',
-        //   'icon-alt': 'keyboard_arrow_down',
-        //   text: i18n.t('More'),
-        //   model: false,
-        //   children: [
-        //     { text: 'Import' },
-        //     { text: 'Export' },
-        //     { text: 'Print' },
-        //     { text: 'Undo changes' },
-        //     { text: 'Other contacts' }
-        //   ]
-        // },
         { divider: true},
+        {
+          icon: 'account_circle',
+          text: i18n.t('Profile'),
+          path: '/profile',
+          perms: null,
+          show: this.isLoggedIn
+        },
         {
           icon: 'settings',
           text: i18n.t('Settings'),
@@ -623,6 +649,9 @@ export default {
     isAuthRequired() {
       return this.$config.auth_required
     },
+    isAllowReadonly() {
+      return this.$config.allow_readonly
+    },
     isSignupEnabled() {
       return this.$config.signup_enabled
     },
@@ -638,6 +667,17 @@ export default {
       set(value) {
         // FIXME: offer query suggestions to user here, in future
       }
+    },
+    queries() {
+      return this.$store.getters.getUserQueries.map(query => (
+        {
+          icon: 'remove_circle_outline',
+          text: query.text,
+          path: '/alerts',
+          query: query.q,
+          perms: 'read:alerts',
+          show: true
+        }))
     },
     actions() {
       return this.$config.actions
@@ -671,6 +711,7 @@ export default {
   mounted() {
     if (this.isLoggedIn) {
       this.$store.dispatch('getUserPrefs')
+      this.$store.dispatch('getUserQueries')
     }
   },
   methods: {
@@ -693,6 +734,17 @@ export default {
     },
     clearSelected() {
       this.$store.dispatch('alerts/updateSelected', [])
+    },
+    saveSearch() {
+      if (this.query) {
+        this.$store.dispatch('addUserQuery', {
+          text: this.query,
+          q: this.query
+        })
+      }
+    },
+    deleteSearch(query) {
+      this.$store.dispatch('removeUserQuery', query)
     },
     takeBulkAction(action) {
       Promise.all(this.selected.map(a => this.$store.dispatch('alerts/takeAction', [a.id, action, '']))).then(() => {

@@ -88,6 +88,13 @@ export function createRouter(basePath): VueRouter {
         meta: { title: 'Reports', requiresAuth: true }
       },
       {
+        path: '/profile',
+        name: 'profile',
+        component: () =>
+          import(/* webpackChunkName: 'user' */ './views/Profile.vue'),
+        meta: { title: 'Profile', requiresAuth: true }
+      },
+      {
         path: '/settings',
         name: 'settings',
         component: () =>
@@ -165,7 +172,8 @@ export function createRouter(basePath): VueRouter {
   router.beforeEach((to, from, next) => {
     if ((store.getters.getConfig('auth_required') &&
       to.matched.some(record => record.meta.requiresAuth))) {
-      if (!store.getters['auth/isLoggedIn']) {
+      if (!store.getters['auth/isLoggedIn'] && 
+        !store.getters.getConfig('allow_readonly')) {
         next({
           path: '/login',
           query: { redirect: to.fullPath }

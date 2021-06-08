@@ -114,11 +114,12 @@
                 <v-flex
                   xs12
                 >
-                  <v-select
+                  <v-combobox
                     v-model="editedItem.service"
                     :items="currentServices"
                     :menu-props="{ maxHeight: '400' }"
                     :label="$t('Service')"
+                    chips
                     multiple
                     :hint="$t('ChooseService')"
                     persistent-hint
@@ -128,7 +129,7 @@
                   xs12
                 >
                   <v-text-field
-                    v-model="editedItem.resource"
+                    v-model.trim="editedItem.resource"
                     :label="$t('Resource')"
                   />
                 </v-flex>
@@ -136,7 +137,7 @@
                   xs12
                 >
                   <v-text-field
-                    v-model="editedItem.event"
+                    v-model.trim="editedItem.event"
                     :label="$t('Event')"
                   />
                 </v-flex>
@@ -144,7 +145,7 @@
                   xs12
                 >
                   <v-text-field
-                    v-model="editedItem.group"
+                    v-model.trim="editedItem.group"
                     :label="$t('Group')"
                   />
                 </v-flex>
@@ -184,7 +185,16 @@
                   xs12
                 >
                   <v-text-field
-                    v-model="editedItem.text"
+                    v-model.trim="editedItem.origin"
+                    :label="$t('Origin')"
+                  />
+                </v-flex>
+
+                <v-flex
+                  xs12
+                >
+                  <v-text-field
+                    v-model.trim="editedItem.text"
                     :label="$t('Reason')"
                   />
                 </v-flex>
@@ -216,6 +226,46 @@
     <v-card>
       <v-card-title class="title">
         {{ $t('Blackouts') }}
+        <v-spacer />
+        <v-btn-toggle
+          v-model="status"
+          class="transparent"
+          multiple
+        >
+          <v-btn
+            value="active"
+            flat
+          >
+            <v-tooltip bottom>
+              <v-icon slot="activator">
+                notifications_paused
+              </v-icon>
+              <span>{{ $t('Active') }}</span>
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            value="pending"
+            flat
+          >
+            <v-tooltip bottom>
+              <v-icon slot="activator">
+                schedule
+              </v-icon>
+              <span>{{ $t('Pending') }}</span>
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            value="expired"
+            flat
+          >
+            <v-tooltip bottom>
+              <v-icon slot="activator">
+                block
+              </v-icon>
+              <span>{{ $t('Expired') }}</span>
+            </v-tooltip>
+          </v-btn>
+        </v-btn-toggle>
         <v-spacer />
         <v-text-field
           v-model="search"
@@ -272,6 +322,7 @@
               </v-icon>{{ tag }}
             </v-chip>
           </td>
+          <td>{{ props.item.origin }}</td>
           <td class="text-xs-right">
             <v-tooltip top>
               {{ props.item.status | capitalize }}
@@ -414,6 +465,7 @@ export default {
       rowsPerPage: 20
     },
     // totalItems: number,
+    status: ['active', 'pending', 'expired'],
     search: '',
     dialog: false,
     headers: [
@@ -424,6 +476,7 @@ export default {
       { text: i18n.t('Event'), value: 'event' },
       { text: i18n.t('Group'), value: 'group' },
       { text: i18n.t('Tags'), value: 'tags' },
+      { text: i18n.t('Origin'), value: 'origin' },
       { text: '', value: 'status' },
       { text: i18n.t('Start'), value: 'startTime' },
       { text: i18n.t('End'), value: 'endTime' },
@@ -442,6 +495,7 @@ export default {
       event: null,
       group: null,
       tags: [],
+      origin: null,
       period: {
         startDate: null,
         startTime: null,
@@ -460,6 +514,7 @@ export default {
       event: null,
       group: null,
       tags: [],
+      origin: null,
       period: {
         startDate: null,
         startTime: null,
@@ -474,18 +529,20 @@ export default {
   }),
   computed: {
     blackouts() {
-      return this.$store.state.blackouts.blackouts.map(b => {
-        let s = moment(b.startTime)
-        let e = moment(b.endTime)
-        return Object.assign(b, {
-          period: {
-            startDate: s.format('YYYY-MM-DD'),
-            startTime: s.format('HH:mm'),
-            endDate: e.format('YYYY-MM-DD'),
-            endTime: e.format('HH:mm')
-          }
+      return this.$store.state.blackouts.blackouts
+        .filter(b => !this.status || this.status.includes(b.status))
+        .map(b => {
+          let s = moment(b.startTime)
+          let e = moment(b.endTime)
+          return Object.assign(b, {
+            period: {
+              startDate: s.format('YYYY-MM-DD'),
+              startTime: s.format('HH:mm'),
+              endDate: e.format('YYYY-MM-DD'),
+              endTime: e.format('HH:mm')
+            }
+          })
         })
-      })
     },
     computedHeaders() {
       return this.headers.filter(h => !this.$config.customer_views ? h.value != 'customer' : true)
@@ -494,7 +551,7 @@ export default {
       return this.$store.getters['customers/customers']
     },
     allowedEnvironments() {
-      return this.$store.getters['alerts/environments']
+      return this.$store.getters['alerts/environments']()
     },
     currentServices() {
       return this.$store.getters['alerts/services']
@@ -507,6 +564,15 @@ export default {
     },
     formTitle() {
       return !this.editedId ? i18n.t('NewBlackout') : i18n.t('EditBlackout')
+    },
+    blackoutStartNow() {
+      return this.$store.getters.getPreference('blackoutStartNow')
+    },
+    blackoutPeriod() {
+      return (
+        (this.$store.getters.getPreference('blackoutPeriod') ||
+          this.$store.getters.getConfig('blackouts').duration)
+      )
     },
     times() {
       return Array.from(
@@ -562,7 +628,11 @@ export default {
     getTags() {
       this.$store.dispatch('alerts/getTags')
     },
-    getNext15mins(date) {
+    getBlackoutTime(date) {
+      if (this.blackoutStartNow) {
+        return moment(date)
+      }
+      // return soonest 15 minute interval
       return moment(
         new Date(
           Math.ceil(date.getTime() / 1000 / 60 / 15) * 1000 * 60 * 15
@@ -571,9 +641,9 @@ export default {
     },
     defaultTimes() {
       let now = new Date()
-      let start = this.getNext15mins(now)
-      now.setTime(now.getTime() + 1 * 60 * 60 * 1000) // plus 1 hour
-      let end = this.getNext15mins(now)
+      let start = this.getBlackoutTime(now)
+      now.setTime(now.getTime() + this.blackoutPeriod * 1000)
+      let end = this.getBlackoutTime(now)
 
       return {
         startDate: start.format('YYYY-MM-DD'),
@@ -592,6 +662,8 @@ export default {
     },
     copyItem(item) {
       this.editedItem = Object.assign({}, item)
+      this.editedItem.period = this.defaultTimes()
+      this.editedId = null
       this.dialog = true
     },
     deleteItem(item) {
@@ -625,6 +697,7 @@ export default {
             event: this.editedItem.event,
             group: this.editedItem.group,
             tags: this.editedItem.tags,
+            origin: this.editItem.origin,
             startTime: this.toISODate(
               this.editedItem.period.startDate,
               this.editedItem.period.startTime
@@ -640,6 +713,7 @@ export default {
         this.$store.dispatch(
           'blackouts/createBlackout',
           Object.assign(this.editedItem, {
+            id: null,
             startTime: this.toISODate(
               this.editedItem.period.startDate,
               this.editedItem.period.startTime
