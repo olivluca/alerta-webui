@@ -62,6 +62,42 @@
             xs12
             class="pb-0"
           >
+            <v-autocomplete
+              v-model="filterEnvironment"
+              :items="allowedEnvironments"
+              :menu-props="{ maxHeight: '400' }"
+              :placeholder="$t('AllEnvironments')"
+              :label="$t('Environment')"
+              multiple
+              outline
+              dense
+              :hint="$t('EnvironmentDescription')"
+              persistent-hint
+            />
+          </v-flex>
+
+          <v-flex
+            xs12
+            class="pb-0"
+          >
+            <v-select
+              v-model="filterSeverity"
+              :items="severityList"
+              small-chips
+              :placeholder="$t('AllSeverities')"
+              :label="$t('Severity')"
+              multiple
+              outline
+              dense
+              :hint="$t('SeverityDescription')"
+              persistent-hint
+            />
+          </v-flex>
+
+          <v-flex
+            xs12
+            class="pb-0"
+          >
             <v-select
               v-model="filterStatus"
               :items="statusList"
@@ -324,9 +360,14 @@ export default {
     history() {
       return this.item.history.map((h, index) => ({ index: index, ...h }))
     },
-    isWatched() {
-      const tag = `watch:${this.username}`
-      return this.item.tags.indexOf(tag) > -1
+    allowedEnvironments() {
+      return this.$config.environments
+    },
+    severityList() {
+      let severityMap = this.$config.alarm_model.severity
+      return Object.keys(severityMap).sort((a, b) => {
+        return severityMap[a] - severityMap[b]
+      })
     },
     statusList() {
       // FIXME - remove defaultStatusMap from v7.0 onwards
@@ -356,81 +397,98 @@ export default {
     },
     filterText: {
       get() {
-        return this.$store.state.alerts.filter.text
+        return this.$store.state.reports.filter.text
       },
       set(value) {
-        this.$store.dispatch('alerts/setFilter', {
+        this.$store.dispatch('reports/setFilter', {
           text: value
+        })
+      }
+    },
+    filterEnvironment: {
+      get() {
+        return this.$store.state.reports.filter.environment
+      },
+      set(value) {
+        this.$store.dispatch('reports/setFilter', {
+          environment: value.length > 0 ? value : null
+        })
+      }
+    },
+    filterSeverity: {
+      get() {
+        return this.$store.state.reports.filter.severity
+      },
+      set(value) {
+        this.$store.dispatch('reports/setFilter', {
+          severity: value.length > 0 ? value : null
         })
       }
     },
     filterStatus: {
       get() {
-        return this.$store.state.alerts.filter.status
+        return this.$store.state.reports.filter.status
       },
       set(value) {
-        this.$store.dispatch('alerts/setFilter', {
+        this.$store.dispatch('reports/setFilter', {
           status: value.length > 0 ? value : null
         })
       }
     },
     filterCustomer: {
       get() {
-        return this.$store.state.alerts.filter.customer
+        return this.$store.state.reports.filter.customer
       },
       set(value) {
-        this.$store.dispatch('alerts/setFilter', {
+        this.$store.dispatch('reports/setFilter', {
           customer: value.length > 0 ? value : null
         })
       }
     },
     filterService: {
       get() {
-        return this.$store.state.alerts.filter.service
+        return this.$store.state.reports.filter.service
       },
       set(value) {
-        this.$store.dispatch('alerts/setFilter', {
+        this.$store.dispatch('reports/setFilter', {
           service: value.length > 0 ? value : null
         })
       }
     },
     filterGroup: {
       get() {
-        return this.$store.state.alerts.filter.group
+        return this.$store.state.reports.filter.group
       },
       set(value) {
-        this.$store.dispatch('alerts/setFilter', {
+        this.$store.dispatch('reports/setFilter', {
           group: value.length > 0 ? value : null
         })
       }
     },
     filterDateRange: {
       get() {
-        return this.$store.state.alerts.filter.dateRange[0] > 0
+        return this.$store.state.reports.filter.dateRange[0] > 0
           ? [0, 0]
-          : this.$store.state.alerts.filter.dateRange
+          : this.$store.state.reports.filter.dateRange
       },
       set(value) {
         if (value[0] === 0) {
           this.period = this.getDateRange(
-            this.$store.state.alerts.filter.dateRange[0]
-              ? this.$store.state.alerts.filter.dateRange[0]
+            this.$store.state.reports.filter.dateRange[0]
+              ? this.$store.state.reports.filter.dateRange[0]
               : moment().unix() - 7 * 24 * 3600,  // 7 days ago
-            this.$store.state.alerts.filter.dateRange[1]
-              ? this.$store.state.alerts.filter.dateRange[1]
+            this.$store.state.reports.filter.dateRange[1]
+              ? this.$store.state.reports.filter.dateRange[1]
               : moment().unix()
           )
           this.showDateRange = true
         } else {
           this.showDateRange = false
-          this.$store.dispatch('alerts/setFilter', {
+          this.$store.dispatch('reports/setFilter', {
             dateRange: value
           })
         }
       }
-    },
-    username() {
-      return this.$store.getters['auth/getUsername']
     }
   },
   watch: {
@@ -439,6 +497,7 @@ export default {
     }
   },
   created() {
+    this.getEnvironments()
     if (this.$config.customer_views) {
       this.getCustomers()
     }
@@ -447,13 +506,16 @@ export default {
 
     if (this.filterDateRange[0] === 0) {
       this.period = this.getDateRange(
-        this.$store.state.alerts.filter.dateRange[0],
-        this.$store.state.alerts.filter.dateRange[1]
+        this.$store.state.reports.filter.dateRange[0],
+        this.$store.state.reports.filter.dateRange[1]
       )
       this.showDateRange = true
     }
   },
   methods: {
+    getEnvironments() {
+      this.$store.dispatch('alerts/getEnvironments')
+    },
     getCustomers() {
       this.$store.dispatch('customers/getCustomers')
     },
@@ -477,7 +539,7 @@ export default {
       return new Date(date + ' ' + time).getTime() / 1000
     },
     setDateRange() {
-      this.$store.dispatch('alerts/setFilter', {
+      this.$store.dispatch('reports/setFilter', {
         dateRange: [
           this.toEpoch(
             this.period.startDate,
@@ -492,7 +554,7 @@ export default {
     },
     reset() {
       this.showDateRange = false
-      this.$store.dispatch('alerts/resetFilter')
+      this.$store.dispatch('reports/resetFilter')
     },
     close() {
       this.$emit('close')

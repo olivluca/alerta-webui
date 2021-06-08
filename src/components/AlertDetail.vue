@@ -171,6 +171,25 @@
           <span>{{ $t('Delete') }}</span>
         </v-tooltip>
 
+        <v-tooltip
+          :key="copyIconText"
+          bottom
+        >
+          <v-btn
+            slot="activator"
+            icon
+            class="btn--plain px-1 mx-0"
+            @click="clipboardCopy(JSON.stringify(item, null, 4))"
+          >
+            <v-icon
+              size="20px"
+            >
+              content_copy
+            </v-icon>
+          </v-btn>
+          <span>{{ copyIconText }}</span>
+        </v-tooltip>
+
         <v-tooltip bottom>
           <v-menu
             slot="activator"
@@ -224,7 +243,7 @@
             >
               <v-alert
                 v-for="note in notes"
-                :key="note.index"
+                :key="note.id"
                 :value="true"
                 dismissible
                 type="info"
@@ -275,7 +294,7 @@
                     </div>
                     <div class="flex xs6 text-xs-left">
                       <div>
-                        <pre>{{ item.id }}</pre>
+                        <span class="console-text">{{ item.id }}</span>
                       </div>
                     </div>
                   </div>
@@ -289,7 +308,7 @@
                     </div>
                     <div class="flex xs6 text-xs-left">
                       <div>
-                        <pre>{{ item.lastReceiveId }}</pre>
+                        <span class="console-text">{{ item.lastReceiveId }}</span>
                       </div>
                     </div>
                   </div>
@@ -362,7 +381,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('customer', item.customer)"
+                      >
                         {{ item.customer }}
                       </div>
                     </div>
@@ -376,10 +398,14 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div
-                        v-if="item.service"
-                      >
-                        {{ item.service.join(', ') }}
+                      <div>
+                        <span
+                          v-for="service in item.service"
+                          :key="service"
+                          @click="queryBy('service', service)"
+                        >
+                          <span class="clickable">{{ service }}</span>&nbsp;
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -392,7 +418,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('environment', item.environment)"
+                      >
                         {{ item.environment }}
                       </div>
                     </div>
@@ -406,7 +435,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('resource', item.resource)"
+                      >
                         {{ item.resource }}
                       </div>
                     </div>
@@ -420,7 +452,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('event', item.event)"
+                      >
                         {{ item.event }}
                       </div>
                     </div>
@@ -435,7 +470,13 @@
                     </div>
                     <div class="flex xs6 text-xs-left">
                       <div>
-                        {{ item.correlate && item.correlate.join(', ') }}
+                        <span
+                          v-for="event in item.correlate"
+                          :key="event"
+                          @click="queryBy('event', event)"
+                        >
+                          <span class="clickable">{{ event }}</span>&nbsp;
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -448,7 +489,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('group', item.group)"
+                      >
                         {{ item.group }}
                       </div>
                     </div>
@@ -624,7 +668,10 @@
                       </div>
                     </div>
                     <div class="flex xs6 text-xs-left">
-                      <div>
+                      <div
+                        class="clickable"
+                        @click="queryBy('origin', item.origin)"
+                      >
                         {{ item.origin }}
                       </div>
                     </div>
@@ -644,6 +691,7 @@
                           :key="tag"
                           label
                           small
+                          @click="queryBy('tags', tag)"
                         >
                           <v-icon left>
                             label
@@ -666,8 +714,28 @@
                     </div>
                     <div class="flex xs6 text-xs-left">
                       <div
+                        v-if="typeof value === 'object'"
+                      >
+                        <span
+                          v-for="v in value"
+                          :key="v"
+                          @click="queryBy(`_.${attr}`, v)"
+                        >
+                          <span class="clickable">{{ v }}</span>&nbsp;
+                        </span>
+                      </div>
+                      <div
+                        v-else-if="typeof value === 'string' && (value.includes('http://') || value.includes('https://'))"
+                        class="link-text"
                         v-html="value"
                       />
+                      <div
+                        v-else
+                        class="clickable"
+                        @click="queryBy(`_.${attr}`, value)"
+                      >
+                        {{ value }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -688,13 +756,14 @@
                 :items="history"
                 item-key="index"
                 :pagination.sync="pagination"
+                sort-icon="arrow_drop_down"
               >
                 <template
                   slot="items"
                   slot-scope="props"
                 >
                   <td class="hidden-sm-and-down">
-                    <pre>{{ props.item.id | shortId }}</pre>
+                    <span class="console-text">{{ props.item.id | shortId }}</span>
                   </td>
                   <td
                     class="hidden-sm-and-down text-no-wrap"
@@ -721,6 +790,9 @@
                     <span class="label">
                       {{ props.item.status | capitalize }}
                     </span>
+                  </td>
+                  <td class="hidden-sm-and-down">
+                    {{ props.item.timeout | hhmmss }}
                   </td>
                   <td>
                     <span class="label">
@@ -758,7 +830,7 @@
               flat
             >
               <v-card-text>
-                <pre>{{ item.rawData || 'no raw data' }}</pre>
+                <span class="console-text">{{ item.rawData || 'no raw data' }}</span>
               </v-card-text>
             </v-card>
           </v-tab-item>
@@ -809,17 +881,19 @@ export default {
       descending: true
     },
     headers: [
-      { text: i18n.t('Alert/Note Id'), value: 'id', hide: 'smAndDown' },
+      { text: i18n.t('AlertOrNoteId'), value: 'id', hide: 'smAndDown' },
       { text: i18n.t('UpdateTime'), value: 'updateTime', hide: 'smAndDown' },
       { text: i18n.t('Updated'), value: 'updateTime', hide: 'mdAndUp' },
       { text: i18n.t('Severity'), value: 'severity', hide: 'smAndDown' },
       { text: i18n.t('Status'), value: 'status', hide: 'smAndDown' },
+      { text: i18n.t('Timeout'), value: 'timeout', hide: 'smAndDown' },
       { text: i18n.t('Type'), value: 'type' },
       { text: i18n.t('Event'), value: 'event', hide: 'smAndDown' },
       { text: i18n.t('Value'), value: 'value', hide: 'smAndDown' },
       { text: i18n.t('User'), value: 'user' },
       { text: i18n.t('Text'), value: 'text' }
-    ]
+    ],
+    copyIconText: i18n.t('Copy')
   }),
   computed: {
     isDark() {
@@ -934,17 +1008,30 @@ export default {
     addNote: debounce(function(id, text) {
       this.$store
         .dispatch('alerts/addNote', [id, text])
-        .then(() => {
-          this.getNotes(this.id)
-        })
+        .then(() => this.getNotes(this.id))
     }, 200, {leading: true, trailing: false}),
     deleteAlert: debounce(function(id) {
       confirm(i18n.t('ConfirmDelete')) &&
         this.$store.dispatch('alerts/deleteAlert', id)
           .then(() => this.$router.push({ name: 'alerts' }))
     }, 200, {leading: true, trailing: false}),
+    queryBy(attribute, value) {
+      this.$router.push({ path: `/alerts?q=${attribute}:"${value}"` })  // double-quotes (") around value mean exact match
+    },
     close() {
       this.$emit('close')
+    },
+    clipboardCopy(text) {
+      this.copyIconText = i18n.t('Copied')
+      let textarea = document.createElement('textarea')
+      textarea.textContent = text
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setTimeout(() => {
+        this.copyIconText = i18n.t('Copy')
+      }, 2000)
     }
   }
 }
@@ -998,5 +1085,31 @@ export default {
 
 .v-alert__dismissible {
   margin-top: 8px;
+}
+
+.console-text {
+  font-size: 14px;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  white-space: pre;
+  line-height: 1;
+}
+
+div.clickable, span.clickable {
+  cursor: pointer;
+  color: #3f51b5;
+  font-weight: 400;
+  text-decoration: underline;
+}
+
+.theme--dark div.clickable, .theme--dark span.clickable, .theme--dark div.link-text a {
+  color: orange;
+}
+
+div.clickable:hover, span.clickable:hover, div.link-text a:hover {
+  text-decoration: none;
+}
+
+#alerta .v-chip__content {
+  cursor: pointer;
 }
 </style>

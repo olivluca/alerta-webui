@@ -19,14 +19,11 @@ const state = {
   alert: {},
   notes: [],
 
-  offenders: [],
-  flapping: [],
-  standing: [],
-
   // not persisted
   isWatch: false,
   isKiosk: false,
   showPanel: false,
+  displayDensity: 'comfortable',  // 'comfortable' or 'compact'
 
   // query, filter and pagination
   query: {}, // URLSearchParams
@@ -41,12 +38,11 @@ const state = {
   },
 
   pagination: {
-    descending: true,
     page: 1,
     rowsPerPage: 20,
     sortBy: 'default',
-    totalItems: 0,
-    rowsPerPageItems: [10, 20, 30, 40, 50]
+    descending: false,
+    rowsPerPageItems: [5, 10, 20, 50, 100, 200]
   }
 }
 
@@ -58,10 +54,12 @@ const mutations = {
     state.isSearching = true
     state.query = query
   },
-  SET_ALERTS(state, alerts): any {
+  SET_ALERTS(state, [alerts, total, pageSize]): any {
     state.isLoading = false
     state.isSearching = false
     state.alerts = alerts
+    state.pagination.totalItems = total
+    state.pagination.rowsPerPage = pageSize
   },
   RESET_LOADING(state): any {
     state.isLoading = false
@@ -91,15 +89,6 @@ const mutations = {
   SET_TAGS(state, tags): any {
     state.tags = tags
   },
-  SET_TOP_OFFENDERS(state, top10): any {
-    state.offenders = top10
-  },
-  SET_TOP_FLAPPING(state, top10): any {
-    state.flapping = top10
-  },
-  SET_TOP_STANDING(state, top10): any {
-    state.standing = top10
-  },
   SET_SETTING(state, { s, v }) {
     state[s] = v
   },
@@ -117,19 +106,36 @@ const mutations = {
 const actions = {
   getAlerts({ rootGetters, commit, state }) {
     commit('SET_LOADING')
-    // get "lucene" query params and sort order
+    // get "lucene" query params (?q=)
     let params = new URLSearchParams(state.query)
-    let sortBy = rootGetters['getConfig']('sort_by')
-    params.append('sort-by', sortBy.replace(/^\-/,''))
-    if (sortBy.startsWith('-')) {
-      params.append('reverse', '1')
-    }
 
     // append filter params to query params
+    state.filter.environment && params.append('environment', state.filter.environment)
     state.filter.status && state.filter.status.map(st => params.append('status', st))
     state.filter.customer && state.filter.customer.map(c => params.append('customer', c))
     state.filter.service && state.filter.service.map(s => params.append('service', s))
     state.filter.group && state.filter.group.map(g => params.append('group', g))
+
+    // add server-side sorting
+    let sortBy = state.pagination.sortBy
+    if (sortBy === 'default' || !sortBy) {
+      sortBy = rootGetters['getConfig']('sort_by')
+    }
+
+    if (typeof sortBy === 'string') {
+      params.append('sort-by', (state.pagination.descending ? '-' : '') + sortBy)
+    } else {
+      sortBy.map(sb => params.append('sort-by', sb))
+    }
+
+    // need notes from alert history if showing notes icons
+    if (rootGetters.getPreference('showNotesIcon')) {
+      params.append('show-history', 'true')
+    }
+
+    // add server-side paging
+    params.append('page', state.pagination.page)
+    params.append('page-size', state.pagination.rowsPerPage)
 
     // apply any date/time filters
     if (state.filter.dateRange[0] > 0) {
@@ -156,7 +162,7 @@ const actions = {
     }
 
     return AlertsApi.getAlerts(params)
-      .then(({ alerts }) => commit('SET_ALERTS', alerts))
+      .then(({ alerts, total, pageSize }) => commit('SET_ALERTS', [alerts, total, pageSize]))
       .catch(() => commit('RESET_LOADING'))
   },
   updateQuery({ commit }, query) {
@@ -224,10 +230,42 @@ const actions = {
     return AlertsApi.deleteAlert(alertId)
   },
 
-  getEnvironments({ commit }) {
-    return AlertsApi.getEnvironments({}).then(({ environments }) =>
-      commit('SET_ENVIRONMENTS', environments)
-    )
+  getEnvironments({ commit, state }) {
+    // get "lucene" query params (?q=)
+    let params = new URLSearchParams(state.query)
+
+    // append filter params to query params
+    state.filter.status && state.filter.status.map(st => params.append('status', st))
+    state.filter.customer && state.filter.customer.map(c => params.append('customer', c))
+    state.filter.service && state.filter.service.map(s => params.append('service', s))
+    state.filter.group && state.filter.group.map(g => params.append('group', g))
+
+    // apply any date/time filters
+    if (state.filter.dateRange[0] > 0) {
+      params.append(
+        'from-date',
+        moment.unix(state.filter.dateRange[0]).toISOString() // epoch seconds
+      )
+    } else if (state.filter.dateRange[0] < 0) {
+      params.append(
+        'from-date',
+        moment().utc().add(state.filter.dateRange[0], 'seconds').toISOString() // seconds offset
+      )
+    }
+    if (state.filter.dateRange[1] > 0) {
+      params.append(
+        'to-date',
+        moment.unix(state.filter.dateRange[1]).toISOString() // epoch seconds
+      )
+    } else if (state.filter.dateRange[1] < 0) {
+      params.append(
+        'to-date',
+        moment().utc().add(state.filter.dateRange[1], 'seconds').toISOString() // seconds offset
+      )
+    }
+
+    return AlertsApi.getEnvironments(params)
+      .then(({ environments }) => commit('SET_ENVIRONMENTS', environments))
   },
   getServices({ commit }) {
     return AlertsApi.getServices({}).then(({ services }) =>
@@ -241,17 +279,10 @@ const actions = {
     return AlertsApi.getTags({}).then(({ tags }) => commit('SET_TAGS', tags))
   },
 
-  getTopOffenders({ commit }) {
-    return AlertsApi.getTop10Count({}).then(({ top10 }) => commit('SET_TOP_OFFENDERS', top10))
-  },
-  getTopFlapping({ commit }) {
-    return AlertsApi.getTop10Flapping({}).then(({ top10 }) => commit('SET_TOP_FLAPPING', top10))
-  },
-  getTopStanding({ commit }) {
-    return AlertsApi.getTop10Standing({}).then(({ top10 }) => commit('SET_TOP_STANDING', top10))
-  },
-
   toggle({ commit }, [s, v]) {
+    commit('SET_SETTING', { s, v })
+  },
+  set({ commit }, [s, v]) {
     commit('SET_SETTING', { s, v })
   },
   setFilter({ commit }, filter) {
@@ -278,8 +309,18 @@ const getters = {
       return state.alerts
     }
   },
-  environments: state => {
+  environments: (state, getters, rootState) => (showAllowedEnvs = true) => {
+    if (showAllowedEnvs) {
+      return [...new Set([...rootState.config.environments || [],...state.environments.map(e => e.environment)])].sort()
+    }
     return state.environments.map(e => e.environment).sort()
+  },
+  counts: state => {
+    return state.environments.reduce((grp, e) => {
+      grp[e.environment] = e.count
+      grp['ALL'] = grp['ALL'] + e.count
+      return grp
+    }, {'ALL': 0})
   },
   services: state => {
     return state.services.map(s => s.service).sort()
@@ -292,7 +333,9 @@ const getters = {
   },
   getHash: state => {
     let filterHash = utils.toHash(state.filter)
-    let paginationHash = `sb:${state.pagination.sortBy};sd:${state.pagination.descending ? 1 : 0 }`
+    let sortBy = state.pagination.sortBy ? state.pagination.sortBy : 'default'
+    let descending = state.pagination.descending ? 1 : 0
+    let paginationHash = `sb:${sortBy};sd:${descending}`
     let asiHash = `asi:${state.showPanel ? 1 : 0 }`
     return `#${filterHash};${paginationHash};${asiHash}`
   }

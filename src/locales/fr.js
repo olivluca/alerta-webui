@@ -19,6 +19,8 @@ export const fr = {
   Blackouts: 'Gestion des temps d\'arrêts',
   Permissions: 'Permissions',
   APIKeys: 'Clés API',
+  Searches: 'Searches',
+  Labels: 'Labels',
   Reports: 'Rapports',
   More: 'Plus',
   Settings: 'Paramètres',
@@ -79,6 +81,7 @@ export const fr = {
 
   // Alert detail
   AlertId: 'Id alerte',
+  AlertOrNoteId: 'Id alerte ou note',
   LastReceiveAlertId: 'Dernier Id reçu',
   CreateTime: 'Date de création',
   ReceiveTime: 'Date de réception',
@@ -123,12 +126,17 @@ export const fr = {
   TimeoutLeft: 'Délai restant',
   Dupl: 'Doublons',
   PrevSeverity: 'Gravité Prec.',
+  Duration: 'Durée',
   LastReceiveId: 'Dernier Id reçu',
   LastNote: 'Dernière Note',
 
   // Alert list filter
   Filters: 'Filtres',
   FilterDescription: 'Filtrer les résultats par recherche de texte',
+  AllEnvironments: 'Tous les environnement',
+  EnvironmentDescription: 'Choisissez un ou plusieurs environnement',
+  AllSeverities: 'Tous les gravité',
+  SeverityDescription: 'Choisissez un ou plusieurs gravité',
   AllStatuses: 'Tous les statuts',
   StatusDescription: 'Choisissez un ou plusieurs statuts',
   AllCustomers: 'Tous les clients',
@@ -178,6 +186,9 @@ export const fr = {
   Reason: 'Raison',
   NewBlackout: 'Nouvel incident',
   EditBlackout: 'Modifier incident',
+  Active: 'Actif',
+  Pending: 'En Attente',
+  Expired: 'Expiré',
 
   // Customers
   LookUp: 'Chercher',
@@ -230,15 +241,31 @@ export const fr = {
   UseLocal: 'Date et heure locale',
   UseUTC: 'Utiliser le temps universel (UTC)',
   AlertSettings: 'Paramétrage des alertes',
+  ShowAllowedEnvs: 'Toujours afficher les environnements autorisés',
+  ShowNotesIcon: 'Afficher l\'icône des notes',
+  ShowNotesHint: 'Afficher l\'icône à côté de l\'état de l\'alerte pour indiquer une note d\'opérateur',
+  Font: 'Texte',
+  FontSize: 'Taille de la police',
+  FontWeight: 'Niveaux de graisse',
   PageRows: 'Lignes par page',
   rows: 'lignes',
+  ValueWidth: 'Value Width',
+  DescriptionWidth: 'Description Text Width',
   RefreshInterval: 'Intervalle de rafraîchissement',
   seconds: 'secondes',
+  minutes: 'minutes',
   AckTimeout: 'Durée de mise en affecter',
   ShelveTimeout: 'Durée de mise en attente',
+  BlackoutSettings: 'Paramètres de blackout',
+  BlackoutStartNow: 'Commencer immédiatement la période d\'incident',
+  BlackoutPeriod: 'Durée de la période d\'incident',
   hours: 'heures',
 
-  // Profile Me
+  // Profile
+  Profile: 'Profil',
+  UserID: 'User ID',
+  PrimaryUserID: 'Principal User ID',
+  Provider: 'Provider',
   EmailVerified: 'Email verifié',
   EmailNotVerified: 'Email non verifié',
   Customers: 'Clients',
@@ -270,11 +297,12 @@ export const fr = {
   EditUser: 'Modifier utilisateur',
   
   // Reports
-  TopFlapping: 'Top 10 des signaux de présence',
+  Top: 'Top',
+  Flapping: 'des signaux de présence',
+  Offenders: 'du nombres d\'alerte',
+  Standing: 'des alertes constantes',
   TopFlappingDescription: 'Sources d\'alerte ayant généré le plus grand nombre de changements de gravité d\'alerte.',
-  TopOffenders: 'Top 10 du nombres d\'alerte',
   TopOffendersDescription: 'Sources d’alerte fréquentes ayant généré le plus grand nombre d’alertes et de doublons d’alerte.',
-  TopStanding: 'Top 10 des alertes constantes',
   TopStandingDescription: 'Sources d\'alertes obsolètes ayant des alertes actives pendant une durée prolongée.',
   
   Count: 'Compteur',

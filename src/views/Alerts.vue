@@ -69,20 +69,11 @@
       </div>
     </v-expand-transition>
 
-    <alert-detail
-      v-show="detailDialog"
-      v-if="selectedId"
-      :id="selectedId"
-      @close="close"
-    />
-
     <v-tabs
-      v-if="!detailDialog"
       v-model="currentTab"
       class="px-1"
       grow
     >
-      <v-tabs-slider />
       <v-tab
         v-for="env in environments"
         :key="env"
@@ -147,10 +138,13 @@
           :transition="false"
           :reverse-transition="false"
         >
-          <alert-list
-            :alerts="alertsByEnvironment"
-            @set-alert="setAlert"
-          />
+          <keep-alive max="1">
+            <alert-list
+              v-if="env == filter.environment || env == 'ALL'"
+              :alerts="alertsByEnvironment"
+              @set-alert="setAlert"
+            />
+          </keep-alive>
         </v-tab-item>
       </v-tabs-items>
     </v-tabs>
@@ -163,23 +157,18 @@
 </template>
 
 <script>
+import AlertList from '@/components/AlertList.vue'
+
 import moment from 'moment'
 import { ExportToCsv } from 'export-to-csv'
-
-import AlertList from '@/components/AlertList.vue'
-import AlertIndicator from '@/components/AlertIndicator.vue'
-import AlertDetail from '@/components/AlertDetail.vue'
-import AlertListFilter from '@/components/AlertListFilter.vue'
-
 import utils from '@/common/utils'
-import i18n from '../plugins/i18n'
+import i18n from '@/plugins/i18n'
 
 export default {
   components: {
     AlertList,
-    AlertIndicator,
-    AlertDetail,
-    AlertListFilter
+    AlertIndicator: () => import('@/components/AlertIndicator.vue'),
+    AlertListFilter: () => import('@/components/AlertListFilter.vue')
   },
   props: {
     query: {
@@ -201,7 +190,6 @@ export default {
   data: () => ({
     currentTab: null,
     densityDialog: false,
-    detailDialog: false,
     selectedId: null,
     selectedItem: {},
     sidesheet: false,
@@ -241,15 +229,14 @@ export default {
         .filter(alert => alert.status == 'open')
         .reduce((acc, alert) => acc || !alert.repeat, false)
     },
+    showAllowedEnvs() {
+      return this.$store.getters.getPreference('showAllowedEnvs')
+    },
     environments() {
-      return ['ALL'].concat(this.$store.getters['alerts/environments'])
+      return ['ALL'].concat(this.$store.getters['alerts/environments'](this.showAllowedEnvs))
     },
     environmentCounts() {
-      return this.alerts.reduce((grp, a) => {
-        grp[a.environment] = grp[a.environment] + 1 || 1
-        grp['ALL'] = grp['ALL'] + 1 || 1
-        return grp
-      }, {})
+      return this.$store.getters['alerts/counts']
     },
     alertsByEnvironment() {
       return this.alerts.filter(alert =>
@@ -270,6 +257,9 @@ export default {
     refresh() {
       return this.$store.state.refresh
     },
+    isLoggedIn() {
+      return this.$store.getters['auth/isLoggedIn']
+    },
     isMute() {
       return this.$store.getters.getPreference('isMute')
     },
@@ -283,10 +273,17 @@ export default {
     },
     displayDensity: {
       get() {
-        return this.$store.getters.getPreference('displayDensity')
+        return (
+          this.$store.getters.getPreference('displayDensity') ||
+          this.$store.state.alerts.displayDensity
+        )
       },
       set(value) {
-        this.$store.dispatch('setUserPrefs', {displayDensity: value})
+        if (this.isLoggedIn) {
+          this.$store.dispatch('setUserPrefs', {displayDensity: value})
+        } else {
+          this.$store.dispatch('alerts/set', ['displayDensity', value])
+        }
       }
     },
     pagination() {
@@ -294,27 +291,36 @@ export default {
     }
   },
   watch: {
-    detailDialog(val) {
-      val || this.close()
+    currentTab(val) {
+      this.setPage(1)
     },
     filter: {
       handler(val) {
         history.pushState(null, null, this.$store.getters['alerts/getHash'])
         this.currentTab = this.defaultTab
+        this.cancelTimer()
+        this.refreshAlerts()
       },
       deep: true
     },
     pagination: {
-      handler(val) {
+      handler(newVal, oldVal) {
         history.pushState(null, null, this.$store.getters['alerts/getHash'])
-      },
-      deep: true
+        if (oldVal.page != newVal.page ||
+          oldVal.rowsPerPage != newVal.rowsPerPage ||
+          oldVal.sortBy != newVal.sortBy ||
+          oldVal.descending != newVal.descending
+        ) {
+          this.getAlerts()
+          this.getEnvironments()
+        }
+      }
+    },
+    refresh(val) {
+      val || this.getAlerts() && this.getEnvironments()
     },
     showPanel(val) {
       history.pushState(null, null, this.$store.getters['alerts/getHash'])
-    },
-    refresh(val) {
-      val || this.getAlerts()
     }
   },
   created() {
@@ -354,6 +360,9 @@ export default {
         sortBy: sort.sb
       })
     },
+    setPage(page) {
+      this.$store.dispatch('alerts/setPagination', {page: page})
+    },
     setPanel(panel) {
       this.$store.dispatch('alerts/setPanel', panel.asi == '1')
     },
@@ -375,10 +384,7 @@ export default {
       })
     },
     setAlert(item) {
-      this.selectedId = item.id
-      this.selectedItem = Object.assign({}, item)
       this.$router.push({ path: `/alert/${item.id}` })
-      this.detailDialog = true
     },
     refreshAlerts() {
       this.getEnvironments()
@@ -396,13 +402,6 @@ export default {
     },
     ok() {
       this.densityDialog = false
-    },
-    close() {
-      this.detailDialog = false
-      setTimeout(() => {
-        this.selectedItem = {}
-        this.selectedId = null
-      }, 300)
     },
     toCsv(data) {
       const options = {

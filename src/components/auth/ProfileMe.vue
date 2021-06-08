@@ -7,9 +7,11 @@
         <v-list-tile-content>
           <v-list-tile-title>{{ profile.name }}</v-list-tile-title>
           <v-list-tile-sub-title>
-            {{
-              profile.preferred_username
-            }}
+            <span>
+              <span
+                v-if="profile.preferred_username && !profile.preferred_username.includes('@')"
+              >@</span>{{ profile.preferred_username }}
+            </span>
           </v-list-tile-sub-title>
         </v-list-tile-content>
 
@@ -56,7 +58,7 @@
         <v-list-tile-content>
           <v-list-tile-title>
             <span
-              v-for="(customer, index) in profile.customers"
+              v-for="(customer, index) in customers"
               :key="index"
             >
               <v-chip
@@ -69,7 +71,7 @@
               <span
                 v-if="index === 3"
                 class="grey--text caption"
-              >(+{{ profile.customers.length - 1 }} {{ $t('others') }})</span>
+              >(+{{ customers.length - 1 }} {{ $t('others') }})</span>
             </span>
           </v-list-tile-title>
           <v-list-tile-sub-title>{{ $t('Customers') }}</v-list-tile-sub-title>
@@ -214,15 +216,24 @@ export default {
   computed: {
     scopes() {
       return this.$store.getters['auth/scopes']
+    },
+    customers() {
+      return this.$store.getters['auth/customers']
     }
   },
   methods: {
     logout() {
+      this.$store.dispatch('resetUserPrefs')
       this.$store
         .dispatch('auth/logout')
         .then(response => {
           if (response.data.logoutUrl) {
-            let redirectUrl = 'post_logout_redirect_url=' + window.location.origin + '/logout'
+            let redirectUrl =
+              (this.$config.provider == 'keycloak'
+                ? 'redirect_uri='
+                : 'post_logout_redirect_url=') +
+              this.$store.getters['auth/getOptions']['providers'][this.$config.provider]['redirectUri'] +
+              '/logout'
             window.location.href = response.data.logoutUrl + '?' + redirectUrl
           } else {
             this.$router.push({ name: 'logout' })

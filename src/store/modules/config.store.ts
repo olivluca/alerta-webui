@@ -5,6 +5,8 @@ const state = {
   alarm_model: {},  // includes severity, colors and status maps
 
   auth_required: true,
+  allow_readonly: false,
+  readonly_scopes: ['read'],
   provider: 'basic',
   customer_views: false,
   signup_enabled: true,
@@ -22,14 +24,23 @@ const state = {
   severity: {},  // moved to alarm_model
   colors: {},  // moved to alarm_model
 
+  timeouts: {}, // includes alert, heartbeat, ack and shelve timeouts
+
+  blackouts: {}, // include default duration
+
   dates: {
     longDate: 'ddd D MMM, YYYY HH:mm:ss.SSS Z',
     mediumDate: 'ddd D MMM HH:mm',
     shortTime: 'HH:mm'
   },
+  font: {
+    'font-family': '"Sintony", Arial, sans-serif',
+    'font-size': '13px',
+    'font-weight': 500
+  },
   audio: {},
   columns: [],
-  sort_by: 'lastReceiveTime',
+  sort_by: ['severity', 'lastReceiveTime'],
   actions: [],
   filter: {
     text: null,
@@ -41,7 +52,8 @@ const state = {
   },
 
   tracking_id: null,
-  refresh_interval: 5*1000  // milliseconds
+  refresh_interval: 5*1000,  // milliseconds
+  environments: []
 }
 
 const mutations = {
