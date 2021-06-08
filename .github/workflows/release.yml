@@ -31,8 +31,8 @@ jobs:
         id: build
         run: |
           npm run build
-          zip alerta-webui.zip -r dist/*
-          tar cvfz alerta-webui.tar.gz dist/*
+          zip alerta-webui-test.zip -r dist/*
+          tar cvfz alerta-webui-test.tar.gz dist/*
       - name: Create Release
         id: create-release
         uses: actions/create-release@v1
