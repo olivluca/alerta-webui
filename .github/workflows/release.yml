@@ -31,8 +31,7 @@ jobs:
         id: build
         run: |
           npm run build
-          zip alerta-webui-test.zip -r dist/*
-          tar cvfz alerta-webui-test.tar.gz dist/*
+          tar cvfz alerta-webui.tar.gz dist/*
       - name: Create Release
         id: create-release
         uses: actions/create-release@v1
@@ -43,16 +42,6 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Zip File
-        id: upload-zip-file
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }} 
-          asset_path: ./alerta-webui-test.zip
-          asset_name: alerta-webui-test.zip
-          asset_content_type: application/zip
       - name: Upload Compressed TAR File
         id: upload-tarball
         uses: actions/upload-release-asset@v1
@@ -60,6 +49,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }} 
-          asset_path: ./alerta-webui-test.tar.gz
-          asset_name: alerta-webui-test.tar.gz
+          asset_path: ./alerta-webui.tar.gz
+          asset_name: alerta-webui.tar.gz
           asset_content_type: application/gzip
