@@ -21,27 +21,10 @@ jobs:
         id: build
         run: |
           npm run build
-          zip alerta-webui.zip -r dist/*
           tar cvfz alerta-webui.tar.gz dist/*
-      - name: Create Release
-        id: create-release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: wetron
-          release_name: wetron
-          draft: false
-          prerelease: false
-      - name: Upload Zip File
-        id: upload-zip-file
-        uses: softprops/action-gh-release@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./alerta-webui.zip
       - name: Upload Compressed TAR File
         id: upload-tarball
-        uses: softprops/action-gh-release@v2
+        uses: actions/Upload-artifact@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./alerta-webui.tar.gz
+          name: alerta-wetron
+          path: ./alerta-webui.tar.gz
