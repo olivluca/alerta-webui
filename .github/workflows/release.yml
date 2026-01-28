@@ -21,10 +21,9 @@ jobs:
         id: build
         run: |
           npm run build
-          tar cvfz alerta-webui.tar.gz dist/*
       - name: Upload Compressed TAR File
         id: upload-tarball
         uses: actions/Upload-artifact@v4
         with:
           name: alerta-wetron
-          path: ./alerta-webui.tar.gz
+          path: dist
