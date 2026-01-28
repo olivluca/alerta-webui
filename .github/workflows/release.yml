@@ -1,8 +1,7 @@
 name: Release
 
 on:
-  push:
-    tags: [ 'v*' ]
+  workflow_dispatch:
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -11,6 +10,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      BASE_URL: /alerta/
 
     steps:
       - uses: actions/checkout@v4
